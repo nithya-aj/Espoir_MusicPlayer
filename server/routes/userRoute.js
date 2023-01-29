@@ -1,27 +1,22 @@
 const router = require('express').Router();
-const { User, validate } = require('../models/UserModel')
-const bcrypt = require('bcrypt')
+const auth = require('../middleware/authMiddleware')
+const admin = require('../middleware/adminMiddleware')
+const validObjectId = require('../middleware/objectIdMiddleware')
+const { createUser, getAllUsers, getUser, updateUser, deleteUser } = require('../controllers/userController')
 
 //create user
-router.post("/", async (req, res) => {
-    const { error } = validate(req.body)
-    if (error) return res.status(400).send({ message: error.details[0].message })
+router.post("/", createUser)
 
-    const user = await User.findOne({ email: req.body.email })
-    if(user) return res.status(403).send({message:"User with the given email already exits!"})
+// get all users
+router.get("/", admin, getAllUsers)
 
-    const salt = await bcrypt.genSalt(Number(process.env.SALT))
-    const hashedPassword = await bcrypt.hash(req.body.password, salt)
+// get user by id
+router.get("/:id", [validObjectId, auth], getUser)
 
-    let newUser = await new User({
-        ...req.body,
-        password: hashedPassword
-    }).save()
+// update user by id
+router.put("/:id", [validObjectId, auth], updateUser)
 
-    newUser.password = undefined
-    newUser.__v = undefined;
-    
-    res.status(200).send({ data:newUser, message:"Account created successfully!" })
-})
+// delete user
+router.delete("/:id", [validObjectId, admin], deleteUser)
 
 module.exports = router
